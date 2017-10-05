@@ -8,6 +8,8 @@ Description:
     This package attempts to create a layer of abstraction between its user and the database.
     With minimal notion of relational databases and no notions of SQL at all, you are able to
     transform the information contained in databases to datasets or single tables (Views).
+    
+    Complex queries are yet to be implemented, meaning JOIN, GROUP BY and HAVING are not available.
 Depends:
     R (>= 3.0.0),
     RODBC (>= 1.3-1.4),
@@ -19,10 +21,13 @@ LazyData: true
 RoxygenNote: 6.0.1
 URL: https://github.com/PedroMiguelFMoreira/DBAbstractR
 BugReports: https://github.com/PedroMiguelFMoreira/DBAbstractR/issues
-Collate: 
+Collate:
     'SQLQueryFactory.R'
     'DBAbstractR.R'
     'Database.R'
     'DatabaseCredentials.R'
     'SQLQuery.R'
-Suggests: testthat
+Suggests: testthat,
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
