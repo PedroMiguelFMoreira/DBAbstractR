@@ -1,0 +1,151 @@
+#' DBAbstractR
+#'
+#' Represents the abstraction layer between the user and the database. This object encapsulates
+#' both a database and an SQL query builder, allowing the extraction of information by simply
+#' calling functions. The only requirement is that the user knows what a relational database is
+#' and how tables reference each other when related.
+#'
+#' @section Usage:
+#' \preformatted{
+#' dbAbstractR <- DBAbstractR$new()
+#'
+#' dbAbstractR$connectToDatabase(TESTDSN)
+#' # Every command below requires that the connection is established first.
+#' dbAbstractR$listTables()
+#' dbAbstractR$listTableInformation(tableName)
+#' dbAbstractR$createView(viewName, tableMap, distinct, where, groupBy, having)
+#' dbAbstractR$listViews()
+#' dbAbstractR$deleteView(viewName)
+#' dbAbstractR$createDataset(tableMap, distinct, where, groupBy, having)
+#' }
+#'
+#' @section Arguments:
+#' \describe{
+#'   \item{dataSourceName}{Data structure normally used to describe the connection to a database.}
+#'   \item{userID}{Id of the user, usually necessary to perform database connections.}
+#'   \item{password}{Password of the user, usually necessary to perform database connections.}
+#'   \item{tableName}{Name of the table inside a database.}
+#'   \item{viewName}{Name of the view inside a database.}
+#'   \item{tableMap}{Dataframe specifing which tables and columns should be used to extract information.}
+#'   \item{distinct}{Logical that dictates if the data retrieved should be distinct or not.}
+#'   \item{where}{Filters the results by the specified conditions.}
+#'   \item{groupBy}{Groups the results by the values of one or more columns.}
+#'   \item{having}{Further filters the results, by allowing the use of agreggation functions (e.g. COUNT, SUM, ...)}
+#' }
+#'
+#' @section Details:
+#' \code{$new()} Creates an instance of DBAbstractR.
+#'
+#' \code{$connectToDatabase(dataSourceName = "", userID = "", password = "")} Performs the connection to a database, returning its information.
+#'
+#' \code{$listTables} Returns a dataframe with all the tables (name and description) in the database.
+#'
+#' \code{$listTableInformation(tableName = "")} Returns a dataframe with the information (names of the columns, their type and nullability) about a given table.
+#'
+#' \code{$createView(viewName, tableMap, distinct = FALSE, where = "", groupBy = "", having = "")} Creates a View in the database that can be used for further consultations. The contents of the View can be filtered results composed of one or more tables.
+#'
+#' \code{$listViews()} Lists all the Views in a database.
+#'
+#' \code{$deleteView(viewName)} Deletes a View from the database.
+#'
+#' \code{$createDataset(tableMap, distinct = FALSE, where = "", groupBy = "", having = "")} Returns, from the database, the contents of a single table or a set of tables in the form of a dataframe. This results can be filtered or not.
+#'
+#' @import RODBC
+#' @importFrom R6 R6Class
+#' @name DBAbstractR
+#' @examples
+#' \dontrun{
+#' # Building the DBabstractR object.
+#' dbAbstractR <- DBAbstractR$new()
+#'
+#' # Connecting to a database.
+#' dbAbstractR$connectToDatabase("TESTDSN")
+#'
+#' ## To perform the methods below, database connection is required.
+#' # List all the tables in the database.
+#' dbAbstractR$listTables()
+#'
+#' # List all the information about a given table.
+#' dbAbstractR$listTableInformation()
+#'
+#' # Create a view from a table or a set of tables in the database.
+#' dbAbstractR$createView(viewName, tableMap, distinct, where, groupBy, having)
+#' ---- TODO -----
+#'
+#' # List all the views in the database.
+#' dbAbstractR$listViews()
+#'
+#' # Delete a view from the database.
+#' dbAbstractR$deleteView(viewName)
+#'
+#' # Create a dataset from a table or a set of tables in the database.
+#' Please view the examples provided above in "$createView()", both methods work
+#' the same way, the only difference is that a data frame is returned here. Also
+#' this method can be used to consult Views, aswell as tables.
+#' }
+#'
+NULL
+#' @export
+DBAbstractR <- R6Class(
+    classname = "DBAbstractR",
+
+    lock_objects = FALSE,
+
+    cloneable = FALSE,
+
+    private = list(
+        queryBuilder = NULL,
+        database = NULL
+    ),
+
+    public = list(
+        initialize = function() {
+            private$queryBuilder = SQLQueryFactory$new()
+        },
+
+        connectToDatabase = function(dataSourceName = "", userID = "", password = "") {
+            databaseCredentials <- DatabaseCredentials$new(dataSourceName, userID, password)
+
+            private$database = Database$new(databaseCredentials)
+        },
+
+        listTables = function() {
+            private$database$list()
+        },
+
+        listTableInformation = function(tableName) {
+            private$database$listTableInformation(tableName)
+        },
+
+        createView = function(viewName, tableMap, distinct = FALSE,
+                              where = "", groupBy = "", having = "") {
+            query <- private$queryBuilder$createView(viewName, tableMap, distinct,
+                                                    where, groupBy, having)
+
+            private$database$query(query)
+        },
+
+        listViews = function() {
+            private$database$list("VIEW")
+        },
+
+        deleteView = function(viewName = "") {
+            query <- private$queryBuilder$deleteView(viewName)
+
+            private$database$query(query)
+        },
+
+        createDataset = function(tableMap, distinct = FALSE,
+                                 where = "", groupBy = "", having = "") {
+            query = ""
+
+            if (nrow(tableMap) == 1)
+                query <- paste(query, private$queryBuilder$createSelect(tableMap, distinct, where, groupBy, having)$toString())
+            else
+                query <- paste(query, private$queryBuilder$createComplexSelect(tableMap, distinct, where, groupBy, having)$toString())
+
+            private$database$query(query)
+        }
+
+    )
+)
